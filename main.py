@@ -90,9 +90,7 @@ def go(config: DictConfig):
             os.path.join(root_path, "components", "train_val_test_split"),
             "main",
             parameters={
-                "input_artifact": "clean_sample.csv:latest",
-                #"artifact_root": "data",
-                #"artifact_type": "segregated_data",
+                "input": "clean_sample.csv:latest",
                 "test_size": config["modeling"]["test_size"],
                 "random_seed": config["modeling"]["random_seed"],
                 "stratify_by": config["modeling"]["stratify_by"],
