@@ -93,30 +93,17 @@ def go(args):
     if os.path.exists("random_forest_dir"):
         shutil.rmtree("random_forest_dir")
     
-    export_model(run, sk_pipe, "random_forest_dir", X_val, args.output_artifact)
+    export_model(run, sk_pipe, "random_forest_dir", X_val, args.output_artifact, rf_config)
 
-    ######################################
-    ######################################
-    # Upload the model we just exported to W&B
-    # HINT: use wandb.Artifact to create an artifact. Use args.output_artifact as artifact name, "model_export" as
-    # type, provide a description and add rf_config as metadata. Then, use the .add_dir method of the artifact instance
-    # you just created to add the "random_forest_dir" directory to the artifact, and finally use
-    # run.log_artifact to log the artifact to the run
-    ######################################
-
-    
 
     # Plot feature importance
     fig_feat_imp = plot_feature_importance(sk_pipe, processed_features)
 
-    ######################################
     # save r_squared under the "r2" key
     run.summary['r2'] = r_squared
     # log the variable "mae" under the key "mae".
     run.summary['mae'] = mae
    
-    ######################################
-
     # Upload to W&B the feture importance visualization
     run.log(
         {
@@ -141,7 +128,7 @@ def plot_feature_importance(pipe, feat_names):
     return fig_feat_imp
 
 
-def export_model(run, pipe, export_path, X_val, export_artifact):
+def export_model(run, pipe, export_path, X_val, export_artifact, rf_config):
 
     #mlflow.sklearn.save_model(pipe, export_path)
     
@@ -156,6 +143,7 @@ def export_model(run, pipe, export_path, X_val, export_artifact):
         export_artifact,
         type="model_export",
         description="Random Forest pipeline export",
+        metadata=rf_config,
     )
     artifact.add_dir(export_path)
 
@@ -187,7 +175,6 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
         OneHotEncoder(),
     )
     ######################################
-
     # Let's impute the numerical columns to make sure we can handle missing values
     # (note that we do not scale because the RF algorithm does not need that)
     zero_imputed = [
@@ -239,11 +226,7 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
     # Create random forest
     random_Forest = RandomForestRegressor(**rf_config)
 
-    ######################################
-    # Create the inference pipeline. The pipeline must have 2 steps: a step called "preprocessor" applying the
-    # ColumnTransformer instance that we saved in the `preprocessor` variable, and a step called "random_forest"
-    # with the random forest instance that we just saved in the `random_forest` variable.
-    # HINT: Use the explicit Pipeline constructor so you can assign the names to the steps, do not use make_pipeline
+    #Use the explicit Pipeline constructor so you can assign the names to the steps, do not use make_pipeline
     sk_pipe = Pipeline([
             ("preprocessor", preprocessor),
             ("random_forest", random_Forest),
