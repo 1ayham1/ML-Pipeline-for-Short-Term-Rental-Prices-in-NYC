@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 """
-Download from W&B the raw dataset and apply some basic data cleaning, 
-exporting the result to a new artifact
+Split Data into training and testing and upload artifact to wandb
 """
 import argparse
 import logging
-import wandb
 import os
+import tempfile
 
 import pandas as pd
+import wandb
+from sklearn.model_selection import train_test_split
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)-15s %(message)s")
 logger = logging.getLogger()
@@ -16,90 +17,109 @@ logger = logging.getLogger()
 
 def go(args):
     '''
-    updating input_artifact after basic cleaning
+    split data into train/test.
     '''
     
-    run = wandb.init(job_type="basic_cleaning")
-    run.config.update(args)
+    run = wandb.init(job_type="split_data")
 
-    logger.info("Downloading artifact")
+    logger.info("Downloading and reading artifact")
     artifact_local_path = run.use_artifact(args.input_artifact).file()
         
     df = pd.read_csv(artifact_local_path, low_memory=False)
-   
-    logger.info("basic cleaning ... removing outliers")
-
-    min_price = args.min_price
-    max_price = args.max_price
-    idx = df['price'].between(min_price, max_price)
-    df = df[idx].copy()
-
-    # Convert last_review to datetime
-    df['last_review'] = pd.to_datetime(df['last_review'])
     
-    filename = "clean_sample.csv"
-    df.to_csv(filename, index=False)
+    # Split first in model_dev/test, then we further divide model_dev in train and validation
+    logger.info("Splitting data into train, val and test")
+    splits = {}
 
-    #update wandb
-    artifact = wandb.Artifact(
-     args.output_artifact,
-     type=args.output_type,
-     description=args.output_description,
+    splits["train"], splits["test"] = train_test_split(
+        df,
+        test_size=args.test_size,
+        random_state=args.random_state,
+        stratify=df[args.stratify] if args.stratify != 'null' else None,
     )
-    artifact.add_file("clean_sample.csv")
 
-    logger.info("Logging artifact")
-    run.log_artifact(artifact)
+    # Save the artifacts. Use a temporary directory 
+    with tempfile.TemporaryDirectory() as tmp_dir:
 
-    os.remove(filename)
+        for split, df in splits.items():
+
+            # Make the artifact name from the provided root plus the name of the split
+            artifact_name = f"{args.artifact_root}_{split}.csv"
+
+            # Get the path on disk within the temp directory
+            temp_path = os.path.join(tmp_dir, artifact_name)
+
+            logger.info(f"Uploading the {split} dataset to {artifact_name}")
+
+            # Save then upload to W&B
+            df.to_csv(temp_path,index=False)
+
+            artifact = wandb.Artifact(
+                name=artifact_name,
+                type=args.artifact_type,
+                description=f"{split} split of dataset {args.input_artifact}",
+            )
+            artifact.add_file(temp_path)
+
+            logger.info("Logging artifact")
+            run.log_artifact(artifact)
+
+            # This waits for the artifact to be uploaded to W&B. If you
+            # do not add this, the temp directory might be removed before
+            # W&B had a chance to upload the datasets, and the upload
+            # might fail
+            artifact.wait()
+    
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
-        description="basic data cleaning",
+        description="Split a dataset into train and test",
         fromfile_prefix_chars="@",
-        )
+    )
 
     parser.add_argument(
-        "--input_artifact", 
+        "--input_artifact",
         type=str,
         help="Fully-qualified name for the input artifact",
+        required=True,
+    )
+
+    parser.add_argument(
+        "--artifact_root",
+        type=str,
+        help="Root for the names of the produced artifacts. The script will produce 2 artifacts: "
+             "{root}_train.csv and {root}_test.csv",
+        required=True,
+    )
+
+    parser.add_argument(
+        "--artifact_type", type=str, help="Type for the produced artifacts", required=True
+    )
+
+    parser.add_argument(
+        "--test_size",
+        help="Fraction of dataset or number of items to include in the test split",
+        type=float,
         required=True
     )
 
     parser.add_argument(
-        "--output_artifact", 
+        "--random_state",
+        help="An integer number to use to init the random number generator. It ensures repeatibility in the"
+             "splitting",
+        type=int,
+        required=False,
+        default=42
+    )
+
+    parser.add_argument(
+        "--stratify",
+        help="If set, it is the name of a column to use for stratified splitting",
         type=str,
-        help="Fully-qualified name for the input artifact",
-        required=True,
+        required=False,
+        default='null'  # unfortunately mlflow does not support well optional parameters
     )
-
-    parser.add_argument(
-        "--output_type", type=str, help="Type for the artifact", required=True,
-    )
-
-    parser.add_argument(
-        "--output_description", 
-        type=str,
-        help="Description for the artifact",
-        required=True,
-    )
-
-    parser.add_argument(
-        "--min_price", 
-        type=float,
-        help="Hueristic for minimum accepted price",
-        required=True,
-    )
-
-    parser.add_argument(
-        "--max_price", 
-        type=float,
-        help="Hueristic for minimum accepted price",
-        required=True,
-    )
-
 
     args = parser.parse_args()
 
