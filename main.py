@@ -86,14 +86,16 @@ def go(config: DictConfig):
 
         if "data_split" in active_steps:
             _ = mlflow.run(
-            os.path.join(root_path, "src", "data_split"),
+            #os.path.join(root_path, "src", "data_split"),
+            os.path.join(root_path, "components", "train_val_test_split"),
             "main",
             parameters={
                 "input_artifact": "clean_sample.csv:latest",
-                "artifact_root": "data",
-                "artifact_type": "segregated_data",
+                #"artifact_root": "data",
+                #"artifact_type": "segregated_data",
                 "test_size": config["modeling"]["test_size"],
-                "stratify": config["modeling"]["stratify_by"]
+                "random_seed": config["modeling"]["random_seed"],
+                "stratify_by": config["modeling"]["stratify_by"],
             },
         )
 
@@ -108,7 +110,7 @@ def go(config: DictConfig):
             os.path.join(root_path, "src", "train_random_forest"),
             "main",
             parameters={
-                "trainval_artifact": "data_train.csv:latest",
+                "trainval_artifact": "trainval_data.csv:latest",
                 "val_size": config["modeling"]["test_size"],
                 "random_seed": config["modeling"]["random_seed"],
                 "stratify_by": config["modeling"]["stratify_by"],
