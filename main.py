@@ -80,7 +80,7 @@ def go(config: DictConfig):
 
         if "data_split" in active_steps:
             _ = mlflow.run(
-            os.path.join(root_path, "data_split"),
+            os.path.join(root_path, "src", "data_split"),
             "main",
             parameters={
                 "input_artifact": "clean_sample.csv:latest",
@@ -93,20 +93,27 @@ def go(config: DictConfig):
 
         if "train_random_forest" in active_steps:
 
-            # NOTE: we need to serialize the random forest configuration into JSON
+            # serialize the random forest configuration into JSON
             rf_config = os.path.abspath("rf_config.json")
             with open(rf_config, "w+") as fp:
-                json.dump(dict(config["modeling"]["random_forest"].items()), fp)  # DO NOT TOUCH
+                json.dump(dict(config["modeling"]["random_forest"].items()), fp)  
 
-            # NOTE: use the rf_config we just created as the rf_config parameter for the train_random_forest
-            # step
+  
+            _ = mlflow.run(
+            os.path.join(root_path, "src", "train_random_forest"),
+            "main",
+            parameters={
+                "trainval_artifact": "data_train.csv:latest",
+                "val_size": config["modeling"]["test_size"],
+                "random_seed": config["modeling"]["random_seed"],
+                "stratify_by": config["modeling"]["stratify_by"],
+                "rf_config": rf_config,
+                "max_tfidf_features":config["modeling"]["max_tfidf_features"],
+                "output_artifact":"model_export",
+            },
+        )
 
-            ##################
-            # Implement here #
-            ##################
-
-            pass
-
+   
         if "test_regression_model" in active_steps:
 
             ##################
