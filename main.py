@@ -13,9 +13,9 @@ _steps = [
     "data_check",
     "data_split",
     "train_random_forest",
-    # NOTE: We do not include this in the steps so it is not run by mistake.
-    # You first need to promote a model export to "prod" before you can run this,
-    # then you need to run this step explicitly
+    # This is not included steps so it is not run by mistake.
+    # first promote a model export to "prod" before you can run this,
+    # then run this step explicitly
 #    "test_regression_model"
 ]
 
@@ -86,8 +86,9 @@ def go(config: DictConfig):
 
         if "data_split" in active_steps:
             _ = mlflow.run(
+            f"{config['main']['components_repository']}/train_val_test_split",
             #os.path.join(root_path, "src", "data_split"),
-            os.path.join(root_path, "components", "train_val_test_split"),
+            #os.path.join(root_path, "components", "train_val_test_split"),
             "main",
             parameters={
                 "input": "clean_sample.csv:latest",
@@ -121,7 +122,8 @@ def go(config: DictConfig):
    
         if "test_regression_model" in active_steps:
              _ = mlflow.run(
-            os.path.join(root_path, "components", "test_regression_model"),
+            f"{config['main']['components_repository']}/test_regression_model"
+            #os.path.join(root_path, "components", "test_regression_model"),
             "main",
             parameters={
                 "mlflow_model": "random_forest_export:prod",
