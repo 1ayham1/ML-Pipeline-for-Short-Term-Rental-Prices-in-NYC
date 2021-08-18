@@ -175,7 +175,7 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
         OneHotEncoder(),
     )
     ######################################
-    # Let's impute the numerical columns to make sure we can handle missing values
+    # impute the numerical columns to make sure we can handle missing values
     # (note that we do not scale because the RF algorithm does not need that)
     zero_imputed = [
         "minimum_nights",
@@ -186,7 +186,10 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
         "longitude",
         "latitude"
     ]
-    zero_imputer = SimpleImputer(strategy="constant", fill_value=0)
+    #zero_imputer = SimpleImputer(strategy="constant", fill_value=0)
+    zero_imputer = make_pipeline(
+        SimpleImputer(strategy="median"), StandardScaler()
+    )
 
     # A MINIMAL FEATURE ENGINEERING step:
     # we create a feature that represents the number of days passed since the last review
