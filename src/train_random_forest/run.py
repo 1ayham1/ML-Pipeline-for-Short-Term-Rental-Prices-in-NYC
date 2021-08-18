@@ -95,19 +95,32 @@ def go(args):
     
     export_model(run, sk_pipe, "random_forest_dir", X_val, args.output_artifact, rf_config)
 
-
-    # Plot feature importance
-    fig_feat_imp = plot_feature_importance(sk_pipe, processed_features)
-
     # save r_squared under the "r2" key
     run.summary['r2'] = r_squared
     # log the variable "mae" under the key "mae".
     run.summary['mae'] = mae
-   
+    
+    # Plot feature importance
+    fig_feat_imp = plot_feature_importance(sk_pipe, processed_features)
+
+    # Plot feature importance
+    fig_cm, sub_cm = plt.subplots(figsize=(10, 10))
+    plot_confusion_matrix(
+        sk_pipe,
+        X_val[processed_features],
+        y_val,
+        ax=sub_cm,
+        normalize="true",
+        values_format=".1f",
+        xticks_rotation=90,
+    )
+    fig_cm.tight_layout()
+
     # Upload to W&B the feture importance visualization
     run.log(
         {
-          "feature_importance": wandb.Image(fig_feat_imp),
+            "feature_importance": wandb.Image(fig_feat_imp),
+            "confusion_matrix": wandb.Image(fig_cm),
         }
     )
 
