@@ -27,7 +27,7 @@ def go(config: DictConfig):
     For multiple parameter testing RUN:
         mlflow run . \
         -P steps=train_random_forest \
-        -P hydra_options="modeling.max_tfidf_features=10,15,30 modeling.random_forest.max_features=0.1,0.33,0.5,0.75,1 -m"
+        -P hydra_options="modeling.max_tfidf_features=10,15,17,30 modeling.random_forest.max_features=0.1,0.33,0.5,0.75,1 -m"
     """
 
     # Setup the wandb experiment. All runs will be grouped under this name
@@ -122,7 +122,7 @@ def go(config: DictConfig):
    
         if "test_regression_model" in active_steps:
              _ = mlflow.run(
-            f"{config['main']['components_repository']}/test_regression_model"
+            f"{config['main']['components_repository']}/test_regression_model",
             #os.path.join(root_path, "components", "test_regression_model"),
             "main",
             parameters={
