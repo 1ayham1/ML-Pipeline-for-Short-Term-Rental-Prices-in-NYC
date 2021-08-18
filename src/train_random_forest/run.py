@@ -18,7 +18,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, FunctionTransformer
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, FunctionTransformer,StandardScaler
+from sklearn.metrics import plot_confusion_matrix
 
 import wandb
 from sklearn.ensemble import RandomForestRegressor
@@ -103,24 +104,11 @@ def go(args):
     # Plot feature importance
     fig_feat_imp = plot_feature_importance(sk_pipe, processed_features)
 
-    # Plot feature importance
-    fig_cm, sub_cm = plt.subplots(figsize=(10, 10))
-    plot_confusion_matrix(
-        sk_pipe,
-        X_val[processed_features],
-        y_val,
-        ax=sub_cm,
-        normalize="true",
-        values_format=".1f",
-        xticks_rotation=90,
-    )
-    fig_cm.tight_layout()
-
     # Upload to W&B the feture importance visualization
     run.log(
         {
             "feature_importance": wandb.Image(fig_feat_imp),
-            "confusion_matrix": wandb.Image(fig_cm),
+            
         }
     )
 
